@@ -1,0 +1,5 @@
+# Prosper_Loan_DataSet_EDA
+P4: Explore and Summarize Data
+In this project I did an EDA for a financial dataset. That's a dataset from Prosper Loan company.
+I did Univariate and Bivariate and Multivariate analysis. It could be a good starting point for
+training a classifier to predict success of failur of loans base on some key features.
