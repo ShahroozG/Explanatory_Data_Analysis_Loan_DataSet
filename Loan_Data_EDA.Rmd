@@ -20,7 +20,7 @@ library(psych)
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Load_the_Data}
 # Load the Data
 
-setwd("C:/Users/Shahrooz/Desktop/P4-Data Analysis With R/Project_04")
+setwd("C:/Users/Shahrooz/Desktop/P4-R")
 # putting null values as "NA"s in the data set.
 loan_Orig <- read.csv("prosperLoanData.csv", na.strings = c("", "NA"))
 
@@ -33,9 +33,11 @@ loan_Orig$CreditScore <- (loan_Orig$CreditScoreRangeLower +
 
 # converting dates to POSIX format for doing calculation with it
 loan_Orig$DateCreditPulled <- as.POSIXlt(loan_Orig$DateCreditPulled)
-loan_Orig$FirstRecordedCreditLine <- as.POSIXlt(loan_Orig$FirstRecordedCreditLine)
+loan_Orig$FirstRecordedCreditLine <- 
+                          as.POSIXlt(loan_Orig$FirstRecordedCreditLine)
 # adding CredutAge as a new variable to dataframe
-loan_Orig$CreditAge <- year(loan_Orig$DateCreditPulled) - year(loan_Orig$FirstRecordedCreditLine)
+loan_Orig$CreditAge <- year(loan_Orig$DateCreditPulled) - 
+                                year(loan_Orig$FirstRecordedCreditLine)
 ```
 
 Base on LoanStatus categories; I think one possible goal for this EDA should be
@@ -50,9 +52,10 @@ and Failed if it's Defaulted or Chargedoff and NA for other categories
 ### creating a new variable base on LoanStatus
 ### Don't forget that if statement is not a vectorized function and that's
 ### the reason I wrote it in this way; Something like nested if statements.
-loan_Orig$LoanStatusLabel <- with(loan_Orig, ifelse(LoanStatus == "Chargedoff", "Failed",
-                                   ifelse(LoanStatus == "Defaulted", "Failed",
-                                   ifelse(LoanStatus == "Completed", "Completed", NA))))
+loan_Orig$LoanStatusLabel <- with(loan_Orig, 
+                                  ifelse(LoanStatus == "Chargedoff", "Failed",
+                                  ifelse(LoanStatus == "Defaulted", "Failed",
+                                  ifelse(LoanStatus == "Completed", "Completed", NA))))
 
 ### converting LoanStatusLabel as factor
 loan_Orig$LoanStatusLabel <- as.factor(loan_Orig$LoanStatusLabel)
@@ -151,20 +154,28 @@ The most frequesnt ProspectScores are 4, 6 and 8; On the other hand, 1 and 11
 are the least frequent ones.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, BorrowerState}
+### learned from Reviwer:For changing the text size or text angle in labels, 
+### use: theme()
 qplot(data = subset(loan, !is.na(BorrowerState)), x = BorrowerState,
-      fill = I('red'))
+      fill = I('red')) +
+  theme(text = element_text(size=8),
+        axis.text.x = element_text(angle = 90))
+  
 summary(loan$BorrowerState)
 ```
 
 California has the most users of Prosper loan services.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, EmploymentStatus}
+### learned from Reviwer:for making smaller values visible, I used log for y 
+### axis;
 qplot(data = subset(loan, !is.na(EmploymentStatus)), 
-      x = EmploymentStatus, fill = I('purple'))
+      x = EmploymentStatus, fill = I('purple'), ylab = 'log10 (Frequency)') +
+  scale_y_log10()
 summary(loan$EmploymentStatus)
 ```
 
-Employed category is is the most frequent employment status.
+Employed category is the most frequent employment status.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, IsBorrowerHomeowner}
 qplot(data = subset(loan, !is.na(IsBorrowerHomeowner)), x = IsBorrowerHomeowner,
@@ -398,7 +409,8 @@ loan_for_cor <- subset(loan, select = c(BorrowerAPR, ProsperScore, CreditScore,
                                         BankcardUtilization, DebtToIncomeRatio,
                                         ProsperPrincipalBorrowed, 
                                         LoanOriginalAmount))
-cor(loan_for_cor, method = "pearson", use = "complete.obs")
+#cor(loan_for_cor, method = "pearson", use = "complete.obs")
+ggcorr(loan_for_cor, nbreaks = 5)
 ```
 
 
@@ -530,8 +542,11 @@ uniformly distributed. It means most of the failed loans relativly had larger
 APRs.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, APRProsperScore}
-ggplot(aes(x = BorrowerAPR, y = ProsperScore), data = loan) +
-  geom_point(alpha = 1/20)
+### Learened from Reviewer: When on variable is factor scatterplot is not
+### appropriate; use boxplot
+ggplot(aes(y = BorrowerAPR, x =factor(ProsperScore)), 
+       data = subset(loan, !is.na(ProsperScore))) +
+  geom_boxplot(alpha = 1/20)
 ```
 
 The ProsperScore and BorrowerAPR are negatively correlated 
@@ -543,8 +558,11 @@ cor(loan$BorrowerAPR, loan$ProsperScore, use = 'complete')
 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, CreditGradeCreditScore}
-ggplot(aes(x = CreditGrade, y = CreditScore), data = loan) +
-  geom_point()
+ggplot(aes(x = CreditGrade, y = CreditScore), 
+       data = subset(loan, !is.na(CreditGrade) & CreditGrade != 'NC' & 
+                       CreditScore > 400),
+       ylim = c(460, 890)) +
+  geom_boxplot(alpha = 1/20, fill = I('#ff0000'))
 ```
 
 There are many overlaps, so I am using Jitter to see more clearly.
@@ -552,14 +570,16 @@ There are many overlaps, so I am using Jitter to see more clearly.
 ```{r echo=FALSE, message=FALSE, warning=FALSE, jitterPlot}
 ggplot(aes(CreditGrade, CreditScore), 
        data = subset(loan, !is.na(CreditGrade))) +
-  geom_jitter(alpha = 1/20, color = "#4EFAE3")
+  geom_jitter(alpha = 1/30, color = "#4EFAE3")
 ```
 
 It seems like CreditGrades are implemented base on CreditScore.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, APRCreditScore}
+### Learned from Reviewer: Put a regression line for showing the trend.
 ggplot(aes(x = BorrowerAPR, y = CreditScore), data = loan) +
-  geom_point(color = "#8080ff")
+  geom_point(alpha = 1/35, color = "#8080ff") +
+  geom_smooth(method = 'lm', color = 'red')
 ```
 
 There is a negative correlation between BorrowerAPR and CreditScore:
@@ -577,12 +597,21 @@ ggplot(aes(y = CreditScore, x = ProsperScore), data = loan) +
   scale_y_continuous(limits = c(520, 800), breaks = seq(520, 800, 50))
 ```
 
-Here is correlation between ProsperScore and CreditScore;
-These two variables are positively correlated:
+ProsperScore and CreditScore variables are positively correlated;
+The correlation coefficient is:
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, corCreditScoreProsperScore}
 cor(loan$CreditScore, loan$ProsperScore, use = 'complete')
 ```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, CreditScoreProsperScoreHeatMap}
+### HeatMap
+ggplot(aes(y = CreditScore, x = ProsperScore, fill = CreditAge),
+       data = loan) +
+       geom_tile() +
+       scale_fill_gradientn(colors = colorRampPalette(c('blue', 'red'))(100))
+```
+
 
 Term and LoanOriginalAmount:
 
@@ -604,8 +633,10 @@ cor(loan$DebtToIncomeRatio, loan$BorrowerAPR, use = 'complete')
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, CreditAgeCreditScorePlot}
+### Learned from Reviewer
 ggplot(aes(x = CreditAge, y = CreditScore), data = loan) +
-  geom_point() +
+  geom_point(alpha = 1/40, color = I('#0033cc')) +
+  geom_smooth(method = 'lm', color = 'red') +
   ylim(300, 850)
 ```
 
@@ -649,6 +680,14 @@ ggplot(aes(x = BorrowerAPR), data = loan) +
   facet_wrap(~ CreditScore)
 ```
 
+```{r echo=FALSE, message=FALSE, warning=FALSE, BorrowerAPRCreditScoreBoxPlot}
+### Learned from Reviewer
+ggplot(aes(x = factor(CreditScore), y = BorrowerAPR), 
+       data = subset(loan, !is.na(CreditScore) & CreditScore > 400)) +
+  geom_boxplot(alpha = 1/20, fill = I('yellow'))
+```
+
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE, loan_Good_Bad_Credit}
 loan_good_credit <- subset(loan, CreditScore >= 810)
 table(loan_good_credit$LoanStatusLabel)
@@ -661,16 +700,26 @@ Above 90% of debtors with creditScore more than 810, are Completed their Loan
 and the majority(69%) of debtors with CreditScore under 510, failed their loan.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, DebtToIncome_ProsperScore}
-ggplot(aes(x = DebtToIncomeRatio, y = ProsperScore), data = loan) +
-  geom_jitter(aes(color = LoanStatusLabel, size = LoanOriginalAmount)) +
-  scale_x_continuous(breaks = seq(0, 1.2, 0.1), limits = c(0, 1.2))
-
 loan_good_area <- subset(loan, DebtToIncomeRatio < 0.5 & ProsperScore > 8)
 table(loan_good_area$LoanStatusLabel)
 ```
 
-Base on this graph DebtToIncomeRatio more less than 0.5 with ProsperScore more
-than 8 is very likely to complete(91%).
+Loans with DebtToIncomeRatio less than 0.5 with ProsperScore more than 8 is very 
+likely to complete(91%).
+
+```{r echo = FALSE, message=FALSE, warning=FALSE, DebtToIncomeProsperScoreBoxPlot}
+### Learned from Reviewer
+loan$LoanOriginalAmount.bucket = cut(loan$LoanOriginalAmount,
+                            c(0, 10000, 20000, 30000))
+
+ggplot(aes(y = (DebtToIncomeRatio), x = factor(ProsperScore)), 
+       data = subset(loan, !is.na(LoanOriginalAmount.bucket) & 
+                       !is.na(ProsperScore)))+
+  geom_boxplot(aes(fill =  LoanOriginalAmount.bucket)) + ylim(0, 1)
+```
+
+When DebtToIncomeRatio decreases, the ProsperScore increases; For ProsperScore
+less than 3, there is no LoanOriginalAmount greater than 20000.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, BorrowerAPR_ProsperScore}
 ggplot(aes(x = BorrowerAPR, y= ProsperScore), data = loan) +
@@ -741,7 +790,7 @@ Completed of Failed loans.
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_One}
 qplot(data = subset(loan, !is.na(BankcardUtilization)), x = BankcardUtilization,
       binwidth = 0.05,
-      xlab = 'Bank Card Utilization',
+      xlab = 'Bank Card Utilization[%]',
       ylab = 'Number of Members',
       main = 'Bank Card Utilization Distribution',
       color = I('black'), fill = I('yellow')) +
@@ -749,32 +798,35 @@ qplot(data = subset(loan, !is.na(BankcardUtilization)), x = BankcardUtilization,
 ```
 
 ### Description One
+
 It's a bimodal distribution. Many of members have 0 revolving bank card 
 utilization and the second crowded point is 0.95 utilization. It's interesting
 because there are two peaks in two sides of the spectrum.
+The first quartile is 0.21 and mean of this variable is 0.53. The maximun value
+of this variable is 5.95;
 
 ### Plot Two
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Two}
 qplot(data = loan,
       x = LoanStatusLabel, y = BorrowerAPR,
       xlab = 'Loan Status',
-      ylab = 'Borrower APR',
-      main = 'Borrower APR Box Plot for Different Loan Statuses',
+      ylab = 'Borrower APR[%]',
+      main = 'Borrower APR Vs. Different Loan Statuses',
       geom = 'boxplot', fill = I("#00b359"))
 
-qplot(data = loan,
-      x = BorrowerAPR, y = ..count../sum(..count..), xlim = c(0.4, 0.6),
-      xlab = 'Borrower APR',
-      ylab = 'Proportion of Memberswith that APR',
-      main = 'APR more than 0.40 with related Proportion of Borrowers',
-      geom = 'freqpoly', color = LoanStatusLabel)
+#qplot(data = loan,
+#      x = BorrowerAPR, y = ..count../sum(..count..), xlim = c(0.4, 0.6),
+#      xlab = 'Borrower APR',
+#      ylab = 'Proportion of Memberswith that APR',
+#      main = 'APR more than 0.40 with related Proportion of Borrowers',
+#      geom = 'freqpoly', color = LoanStatusLabel)
 
-qplot(data = subset(loan, !is.na(BorrowerAPR)), x = BorrowerAPR,
-      color = I('black'), fill = I('green'),
-      xlab = 'BorrowerAPR',
-      ylab = 'Number of Borrowers',
-      main = 'Distribution of Borrower APRs for Different Loan Statuses') +
-  facet_wrap(~ LoanStatusLabel, ncol = 1)
+#qplot(data = subset(loan, !is.na(BorrowerAPR)), x = BorrowerAPR,
+#      color = I('black'), fill = I('green'),
+#      xlab = 'BorrowerAPR',
+#      ylab = 'Number of Borrowers',
+#      main = 'Distribution of Borrower APRs for Different Loan Statuses') +
+#  facet_wrap(~ LoanStatusLabel, ncol = 1)
 
 loan_low_APR_2 <- subset(loan, BorrowerAPR < 0.2)
 table(loan_low_APR_2$LoanStatusLabel)
@@ -789,17 +841,26 @@ Completed loans have a right skewed distribution and the Failed loans have a
 left skewed distribution. It means most of Completed loans have lower APRs and
 most of the Failed loans have larger APRs.
 80% of loans with APR less than 0.2 are completed.
+Minimun APR in this dataset is 0.0063 and maximum value is 0.512; The average of
+APR is 0.222;
 
 ### Plot Three
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Plot_Three}
-ggplot(aes(x = BorrowerAPR, y= ProsperScore), data = loan) +
-  geom_jitter(aes(color = LoanStatusLabel, shape = EmploymentStatus)) +
-  facet_wrap( ~ Term) +
-  xlab('Borrower APR') +
-  ylab('Prosper Score') +
-  ggtitle('Borrower APR Vs. Prosper Score for Different Terms and
-           Different Employment Status with Loan Status')
+# ggplot(aes(x = BorrowerAPR, y= ProsperScore), data = loan) +
+#  geom_jitter(aes(color = LoanStatusLabel, shape = EmploymentStatus)) +
+#  facet_wrap( ~ Term) +
+#  xlab('Borrower APR') +
+#  ylab('Prosper Score') +
+#  ggtitle('Borrower APR Vs. Prosper Score for Different Terms and
+#           Different Employment Status with Loan Status')
 
+### Learned from Reviewer
+ggplot(aes(y = BorrowerAPR, x= factor(ProsperScore)), 
+       data = subset(loan, !is.na(ProsperScore))) +
+  xlab('Prosper Score(Number)') +
+  ylab('Borrower APR[%]') +
+  ggtitle('Borrower APR Vs. Prosper Score') +
+  geom_boxplot(aes(fill = Term))
 
 loan_low_APR <- subset(loan, BorrowerAPR < 0.2 & Term == 12 & 
                          (EmploymentStatus == "Employed" | 
@@ -813,7 +874,10 @@ The most successful loans have 12 months Term. On the other hand 80% of loans
 with Borrower APR less than 0.2 are completed. Another important parameter is
 Employment status. Best categories for Employment Status are Employed and 
 Full-time. If we add up all these conditions together the loans will
-have 98% chance of being completed. That's a really high chance. 
+have 98% chance of being completed. That's a really high chance.
+There are 16491 borrower that are Employed and 24957 borrower has Full-time job;
+Very few of borrowers are not employed: 561; It makes sense because when Prosper
+choose somebody to offer a loan, they prefer that person has some kind of job;
 ------
 
 # Reflection
@@ -823,6 +887,25 @@ The Prosper loan data set contains 113,937 clients with 81 variables. I choose
 new dataset.
 Some variables are related to scoring clients. Variables like CreditScore,
 ProsperScore, CreditGrade. These scores has close relationship together.
+
+I was struggling how I choose a handful of variables between 81  
+variables from the original dataset. I choose the most independent and not IDs
+and gradually decrease them till I reach 16 of them. Another problem was the
+dataset has null values for NAs and it takes a while to understand why I can not
+filterout NAs with !is.na(variable). Another thing that I made decision about
+was LoanStatus variable. It contain many different categories and after
+considering them, I understand I only need two labels for loans: Completed or
+Failed and the other categories are not finished and I can not use them as 
+label.
+
+I believe finding main features for predicting the loan status is a great 
+success. And my graphs show how strong these features predict the loan status.
+This is important for implementing the classifier for future research.
+Defining CreditAge and CreditScore as two new variables are another success of
+this study. Finding the importance of Borrower APR from different aspects, is
+another success that I personally like it.
+
+The process I went through has these stages:
 First I investigate each variable distribution and used some transformations for
 changing some non-normal distributions.
 Next I investigate the relationship and correlations between different features.
@@ -830,11 +913,13 @@ Gradually I defined the project goal, finding the most important predictors for
 successfull loans or Completed ones. I realize that The BorrowerAPR and Terms of
 loan and ProsperScore and Employment Status are good predictors for categorizing
 loans in Completed and Failed groups.
+
 The next step base on these findings could be training a decision tree or naive
 bayes classifier base on mentioned fetures for Loas Status as target.
-Some limitation of this proccess should be the size of filtered dataset. Because
-I only focus on Completed and Failed loan statuses and I can not more than 50%
-of the original dataset because those loans results are not finished and they
-are in progress. If I have access to the updated dataset, I should use all
-original datapoints for training and testing purposes and that really help when
-I double size of dataset.
+
+Some limitation of this proccess should be the size of the filtered dataset. 
+Because I only focus on Completed and Failed loan statuses and I can not more 
+than 50% of the original dataset because those loans results are not finished 
+and they are in progress. If I have access to the updated dataset, I should use 
+all original datapoints for training and testing purposes and that really help 
+when I double size of dataset.
