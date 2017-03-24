@@ -692,7 +692,9 @@ one of the main patameters for determining BorrowerAPR is ProsperScore;
 ### Learned from Reviewer
 ggplot(aes(x = factor(CreditScore), y = BorrowerAPR, fill = LoanStatusLabel),
        data = subset(loan, !is.na(CreditScore) & CreditScore > 400)) +
-  geom_boxplot()
+  geom_boxplot() +
+  theme(text = element_text(size=12),
+        axis.text.x = element_text(angle = 90))
 ```
 
 That's interesting; Without exception, average APR for borrowers with same
@@ -754,16 +756,30 @@ The most successful loans has 12 months Term with BorrowerAPR less than 0.2 and
 Employed or Fulltime job borrower; 98% of these loans are Completed.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, EmploymentStatus_OpenCreditLines}
-ggplot(aes(x = EmploymentStatus , y = OpenCreditLines), data = loan) +
-  geom_jitter(aes(color = LoanStatusLabel)) +
-  facet_wrap( ~ IsBorrowerHomeowner)
+loan$EmploymentStatus <- factor(loan$EmploymentStatus, 
+                            levels = c("Employed", "Full-time", "Self-employed", 
+                                       "Retired", "Other", "Part-time", 
+                                       "Not available"))
+
+ggplot(aes(x = EmploymentStatus , y = OpenCreditLines, fill = LoanStatusLabel), 
+       data = subset(loan, !is.na(EmploymentStatus) & 
+                       EmploymentStatus != 'Not available')) +
+  geom_boxplot() +
+  ylim(0, 15) +
+  facet_wrap( ~ IsBorrowerHomeowner) +
+  theme(text = element_text(size=10),
+        axis.text.x = element_text(angle = 90))
 ```
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, EmploymentStatus_CreditScore}
-ggplot(aes(x = EmploymentStatus , y = CreditScore), data = loan) +
+ggplot(aes(x = EmploymentStatus , y = CreditScore, fill = LoanStatusLabel),
+       data = subset(loan, !is.na(EmploymentStatus) & 
+                       EmploymentStatus != 'Not available')) +
   scale_y_continuous(limits = c(400, 900)) +
-  geom_jitter(aes(color = LoanStatusLabel)) +
-  facet_wrap( ~ IsBorrowerHomeowner)
+  geom_boxplot() +
+  facet_wrap( ~ IsBorrowerHomeowner) +
+  theme(text = element_text(size=10),
+        axis.text.x = element_text(angle = 90))
 ```
 
 HomeOwners has larger margings for CreditSCore and if they are Employed or 
