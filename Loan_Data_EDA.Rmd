@@ -229,7 +229,9 @@ summary(loan$CreditAge)
 qplot(data = subset(loan, !is.na(OpenCreditLines)), x = OpenCreditLines,
       binwidth = 1,
       color = I('black'), fill = I('red')) +
-  scale_x_continuous(breaks = seq(0, 40, 1))
+  scale_x_continuous(breaks = seq(0, 40, 1)) +
+  theme(text = element_text(size=9),
+        axis.text.x = element_text(angle = 90))
 ```
 
 The OpenCreditLines is a little skewed. I tried transforming it with log10
@@ -246,7 +248,7 @@ summary(loan$OpenCreditLines)
 qplot(data = subset(loan, !is.na(CurrentDelinquencies)), 
       x = CurrentDelinquencies,
       color = I('black'), fill = I('purple')) +
-  scale_x_continuous(breaks = seq(0, 20, 2))
+  scale_x_continuous(limits = c(-0.5, 20), breaks = seq(-0.5, 20, 2))
 summary(loan$CurrentDelinquencies)
 ```
 
@@ -267,7 +269,9 @@ users utilize 95% of their bank cards.
 qplot(data = subset(loan, !is.na(DebtToIncomeRatio)), 
       x = DebtToIncomeRatio,
       color = I('black'), fill = I('green')) +
-  scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 0.25))
+  scale_x_continuous(limits = c(0, 10), breaks = seq(0, 10, 0.25)) +
+  theme(text = element_text(size=8),
+        axis.text.x = element_text(angle = 90))
 
 nrow(subset(loan, DebtToIncomeRatio > 5))
 ```
@@ -291,7 +295,9 @@ summary(loan$DebtToIncomeRatio)
 qplot(data = subset(loan, !is.na(ProsperPrincipalBorrowed)), 
       x = ProsperPrincipalBorrowed,
       color = I('black'), fill = I('blue')) +
-  scale_x_continuous(limits = c(0, 45000), breaks = seq(0, 45000, 2000))
+  scale_x_continuous(limits = c(0, 45000), breaks = seq(0, 45000, 2000)) +
+  theme(text = element_text(size=8),
+        axis.text.x = element_text(angle = 90))
 ```
 
 Most of the loans are under $6000. The distribution is right skewed;
@@ -410,7 +416,7 @@ loan_for_cor <- subset(loan, select = c(BorrowerAPR, ProsperScore, CreditScore,
                                         ProsperPrincipalBorrowed, 
                                         LoanOriginalAmount))
 #cor(loan_for_cor, method = "pearson", use = "complete.obs")
-ggcorr(loan_for_cor, nbreaks = 5)
+ggcorr(loan_for_cor, nbreaks = 5, label = TRUE)
 ```
 
 
@@ -542,7 +548,7 @@ uniformly distributed. It means most of the failed loans relativly had larger
 APRs.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, APRProsperScore}
-### Learened from Reviewer: When on variable is factor scatterplot is not
+### Learened from Reviewer: When one variable is a factor, scatterplot is not
 ### appropriate; use boxplot
 ggplot(aes(y = BorrowerAPR, x =factor(ProsperScore)), 
        data = subset(loan, !is.na(ProsperScore))) +
@@ -608,6 +614,7 @@ cor(loan$CreditScore, loan$ProsperScore, use = 'complete')
 ### HeatMap
 ggplot(aes(y = CreditScore, x = ProsperScore, fill = CreditAge),
        data = loan) +
+       ylim(600, 890) +
        geom_tile() +
        scale_fill_gradientn(colors = colorRampPalette(c('blue', 'red'))(100))
 ```
@@ -635,9 +642,9 @@ cor(loan$DebtToIncomeRatio, loan$BorrowerAPR, use = 'complete')
 ```{r echo=FALSE, message=FALSE, warning=FALSE, CreditAgeCreditScorePlot}
 ### Learned from Reviewer
 ggplot(aes(x = CreditAge, y = CreditScore), data = loan) +
-  geom_point(alpha = 1/40, color = I('#0033cc')) +
+  geom_jitter(alpha = 1/40, color = I('#0033cc')) +
   geom_smooth(method = 'lm', color = 'red') +
-  ylim(300, 850)
+  ylim(460, 850)
 ```
 
 Correlation between CreditAge and CreditScore:
@@ -675,17 +682,21 @@ one of the main patameters for determining BorrowerAPR is ProsperScore;
 # Multivariate Plots Section
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, Multivariate_Plots}
-ggplot(aes(x = BorrowerAPR), data = loan) +
-  geom_histogram(aes(fill = LoanStatusLabel)) +
-  facet_wrap(~ CreditScore)
+### From review I learned it's better not to include this graph;
+#ggplot(aes(x = BorrowerAPR), data = loan) +
+#  geom_histogram(aes(fill = LoanStatusLabel)) +
+#  facet_wrap(~ CreditScore)
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, BorrowerAPRCreditScoreBoxPlot}
 ### Learned from Reviewer
-ggplot(aes(x = factor(CreditScore), y = BorrowerAPR), 
+ggplot(aes(x = factor(CreditScore), y = BorrowerAPR, fill = LoanStatusLabel),
        data = subset(loan, !is.na(CreditScore) & CreditScore > 400)) +
-  geom_boxplot(alpha = 1/20, fill = I('yellow'))
+  geom_boxplot()
 ```
+
+That's interesting; Without exception, average APR for borrowers with same
+CreditScore is more for Failed loans!
 
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE, loan_Good_Bad_Credit}
@@ -722,8 +733,14 @@ When DebtToIncomeRatio decreases, the ProsperScore increases; For ProsperScore
 less than 3, there is no LoanOriginalAmount greater than 20000.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, BorrowerAPR_ProsperScore}
-ggplot(aes(x = BorrowerAPR, y= ProsperScore), data = loan) +
-  geom_jitter(aes(color = LoanStatusLabel, shape = EmploymentStatus)) +
+#ggplot(aes(x = BorrowerAPR, y= ProsperScore), data = loan) +
+#  geom_jitter(aes(color = LoanStatusLabel, shape = EmploymentStatus)) +
+#  facet_wrap( ~ Term)
+
+### Base on review I replaced above graph with this one:
+ggplot(aes(x = factor(ProsperScore), y = BorrowerAPR, fill = LoanStatusLabel),
+      data = subset(loan, !is.na(ProsperScore))) +
+  geom_boxplot() +
   facet_wrap( ~ Term)
 
 loan_low_APR <- subset(loan, BorrowerAPR < 0.2 & Term == 12 & 
@@ -734,7 +751,7 @@ table(loan_low_APR$LoanStatusLabel)
 ```
 
 The most successful loans has 12 months Term with BorrowerAPR less than 0.2 and 
-Employed or Fulltime borrower. 98% of these loans are Completed.
+Employed or Fulltime job borrower; 98% of these loans are Completed.
 
 ```{r echo = FALSE, message=FALSE, warning=FALSE, EmploymentStatus_OpenCreditLines}
 ggplot(aes(x = EmploymentStatus , y = OpenCreditLines), data = loan) +
@@ -813,6 +830,7 @@ qplot(data = loan,
       ylab = 'Borrower APR[%]',
       main = 'Borrower APR Vs. Different Loan Statuses',
       geom = 'boxplot', fill = I("#00b359"))
+
 
 #qplot(data = loan,
 #      x = BorrowerAPR, y = ..count../sum(..count..), xlim = c(0.4, 0.6),
